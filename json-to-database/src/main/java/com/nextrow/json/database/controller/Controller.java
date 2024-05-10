@@ -103,7 +103,7 @@ public class Controller {
                     break;
                 }
 
-/* --------------------------for fetching values from database--------------------------*/
+       /* --------------------------for storing values to database--------------------------*/
 
                 // iterating over array and the values are stored as objects
                 for (int i = 0; i < jsonArray.length(); i++) {
@@ -175,12 +175,6 @@ public class Controller {
 
     @GetMapping("/returnData")
     public HashMap<String,HashMap<String,Object>> returnData() throws IOException, SQLException {
-        Resource resource = resourceLoader.getResource("classpath:sample.json");
-        InputStreamReader inputStreamReader = new InputStreamReader(resource.getInputStream());
-        String text = FileCopyUtils.copyToString(inputStreamReader);
-
-        JSONObject jsonObject = new JSONObject(text);
-        JSONObject componentObject = jsonObject.getJSONObject("components");
 
         HashMap<String,HashMap<String,Object>> totalData=new HashMap<>();
         try {
@@ -193,19 +187,28 @@ public class Controller {
             Statement st = con.createStatement();
             DatabaseMetaData databaseMetaData = con.getMetaData();
 
+            // to store the table names that are retrieved from database
+            ArrayList<String> tableNameList=new ArrayList<>();
+
+            // table names are fetched from database
+            ResultSet Set = databaseMetaData.getTables("components", null, "%", null);
+
+            // iterating through result set to store the values of tables in arraylist
+            while (Set.next()) {
+                String tableName = Set.getString("TABLE_NAME");
+                tableNameList.add(tableName);
+            }
+
+            // used to store the table name and table value array as object
             HashMap<String,Object> hashMap=new HashMap<>();
 
             // to store data of rows and columns in form of object
             ArrayList<Object> arrayList=new ArrayList<>();
 
-            for (String s : componentObject.keySet()) {
-
-                JSONArray jsonArray=componentObject.getJSONArray(s);
-                String Name=s.replace('|', '_').replace('-', '_');
-                String tableName = Name.toLowerCase();
-
+            for(String a: tableNameList)
+            {
                 // getting the table data from db
-                ResultSet resultSet = st.executeQuery("SELECT * FROM "+tableName);
+                ResultSet resultSet = st.executeQuery("SELECT * FROM "+a);
 
                 // used metadata to get col count and fetch col names
                 ResultSetMetaData metaData = resultSet.getMetaData();
@@ -219,9 +222,9 @@ public class Controller {
                         keyValue.put(metaData.getColumnLabel(i),resultSet.getObject(i));
                     }
                     arrayList.add(keyValue);
-                    }
+                }
                 // to store the table name and table data
-                hashMap.put(s,arrayList);
+                hashMap.put(a,arrayList);
 
             }
 
